@@ -435,6 +435,9 @@ public struct SignalingOffer {
     /// クライアントが更新すべき設定
     public let configuration: Configuration?
     
+    /// mid
+    public let mid: Dictionary<String, String>?
+
     /// メタデータ
     public var metadata: Any?
 
@@ -1067,6 +1070,7 @@ extension SignalingOffer: Codable {
         case sdp
         case config
         case encodings
+        case mid
     }
     
     public init(from decoder: Decoder) throws {
@@ -1074,6 +1078,7 @@ extension SignalingOffer: Codable {
         clientId = try container.decode(String.self, forKey: .client_id)
         connectionId = try container.decode(String.self, forKey: .connection_id)
         sdp = try container.decode(String.self, forKey: .sdp)
+        mid = try container.decodeIfPresent(Dictionary<String, String>.self, forKey: .mid)
         configuration =
             try container.decodeIfPresent(Configuration.self,
                                           forKey: .config)
