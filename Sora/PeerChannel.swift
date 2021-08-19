@@ -477,7 +477,7 @@ class BasicPeerChannelContext: NSObject, RTCPeerConnectionDelegate {
                                       nativeStream: nativeStream)
         
         if let audioMid = mid?["audio"] {
-            let transceiver = nativeChannel.transceivers.first(where: { $0.mid == audioMid })
+            let transceiver = nativeChannel.transceivers.first { $0.mid == audioMid }
             
             if let transceiver = transceiver {
                 var error: NSError? = nil
