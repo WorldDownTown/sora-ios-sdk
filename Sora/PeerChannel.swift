@@ -163,10 +163,17 @@ public protocol PeerChannel: AnyObject {
      */
     func disconnect(error: Error?)
 
-    func attachVideoTrack(_ stream: MediaStream)
-    func detachVideoTrack(_ stream: MediaStream)
-    func attachAudioTrack(_ stream: MediaStream)
-    func detachAudioTrack(_ stream: MediaStream)
+    func attachVideoTrackToStream(_ stream: MediaStream)
+    func detachVideoTrackFromStream(_ stream: MediaStream)
+    func attachAudioTrackToStream(_ stream: MediaStream)
+    func detachAudioTrackFromStream(_ stream: MediaStream)
+    
+    func attachVideoTrackToSender()
+    func detachVideoTrackFromSender()
+    func attachAudioTrackToSender()
+    func detachAudioTrackFromSender()
+    var videoSender: RTCRtpSender? { get }
+    var audioSender: RTCRtpSender? { get }
 }
 
 // MARK: -
@@ -196,10 +203,12 @@ class BasicPeerChannel: PeerChannel {
     }
     
     private var context: BasicPeerChannelContext!
-    
-    public var audioTrack: RTCAudioTrack?
-    public var videoTrack: RTCVideoTrack?
 
+    public var videoTrack: RTCVideoTrack?
+    public var audioTrack: RTCAudioTrack?
+    public var videoSender: RTCRtpSender?
+    public var audioSender: RTCRtpSender?
+    
     required init(configuration: Configuration, signalingChannel: SignalingChannel) {
         self.configuration = configuration
         self.signalingChannel = signalingChannel
@@ -252,31 +261,59 @@ class BasicPeerChannel: PeerChannel {
         // This method is meant to be called only when disconnection cleanup
     }
     
-    func attachVideoTrack(_ stream: MediaStream) {
+    func attachVideoTrackToStream(_ stream: MediaStream) {
         if let videoTrack = videoTrack {
-            Logger.debug(type: .peerChannel, message: "attachVideoTrack")
+            Logger.debug(type: .peerChannel, message: "attachVideoTrackToStream")
             stream.nativeStream.addVideoTrack(videoTrack)
         }
     }
     
-    func detachVideoTrack(_ stream: MediaStream) {
+    func detachVideoTrackFromStream(_ stream: MediaStream) {
         if let videoTrack = videoTrack {
             stream.nativeStream.removeVideoTrack(videoTrack)
-            Logger.debug(type: .peerChannel, message: "detachVideoTrack")
+            Logger.debug(type: .peerChannel, message: "detachVideoTrackFromStream")
         }
     }
     
-    func attachAudioTrack(_ stream: MediaStream) {
+    func attachAudioTrackToStream(_ stream: MediaStream) {
         if let audioTrack = audioTrack {
             stream.nativeStream.addAudioTrack(audioTrack)
-            Logger.debug(type: .peerChannel, message: "attachAudioTrack")
+            Logger.debug(type: .peerChannel, message: "attachAudioTrackToStream")
         }
     }
     
-    func detachAudioTrack(_ stream: MediaStream) {
+    func detachAudioTrackFromStream(_ stream: MediaStream) {
         if let audioTrack = audioTrack {
             stream.nativeStream.removeAudioTrack(audioTrack)
-            Logger.debug(type: .peerChannel, message: "detachAudioTrack")
+            Logger.debug(type: .peerChannel, message: "detachAudioTrackFromStream")
+        }
+    }
+    
+    func attachVideoTrackToSender() {
+        if let sender = videoSender, let track = videoTrack {
+            sender.track = track
+            Logger.debug(type: .peerChannel, message: "attachVideoTrackToSender")
+        }
+    }
+    
+    func detachVideoTrackFromSender() {
+        if let sender = videoSender {
+            sender.track = nil
+            Logger.debug(type: .peerChannel, message: "detachVideoTrackFromSender")
+        }
+    }
+    
+    func attachAudioTrackToSender() {
+        if let sender = audioSender, let track = audioTrack {
+            sender.track = track
+            Logger.debug(type: .peerChannel, message: "attachAudioTrackToSender")
+        }
+    }
+    
+    func detachAudioTrackFromSender() {
+        if let sender = audioSender {
+            sender.track = nil
+            Logger.debug(type: .peerChannel, message: "detachAudioTrackFromSender")
         }
     }
 }
@@ -524,13 +561,13 @@ class BasicPeerChannelContext: NSObject, RTCPeerConnectionDelegate {
                 } else {
                     Logger.debug(type: .peerChannel,
                                  message: "set audio sender: mid => \(audioMid), transceiver => \(transceiver.debugDescription)")
-                    let audioSender = transceiver.sender
-                    audioSender.streamIds = [nativeStream.streamId]
+                    channel.audioSender = transceiver.sender
+                    channel.audioSender!.streamIds = [nativeStream.streamId]
                     if let audioTrack = nativeStream.audioTracks.first {
                         channel.audioTrack = audioTrack
                         Logger.debug(type: .peerChannel,
                                      message: "set audio track to sender: track => \(audioTrack.debugDescription)")
-                        audioSender.track = audioTrack
+                        channel.audioSender!.track = audioTrack
                     }
                 }
             } else {
@@ -548,13 +585,13 @@ class BasicPeerChannelContext: NSObject, RTCPeerConnectionDelegate {
                 } else {
                     Logger.debug(type: .peerChannel,
                                  message: "set video sender: mid => \(videoMid), transceiver => \(transceiver.debugDescription)")
-                    let videoSender = transceiver.sender
-                    videoSender.streamIds = [nativeStream.streamId]
+                    channel.videoSender = transceiver.sender
+                    channel.videoSender!.streamIds = [nativeStream.streamId]
                     if let videoTrack = nativeStream.videoTracks.first {
                         channel.videoTrack = videoTrack
                         Logger.debug(type: .peerChannel,
                                      message: "set video track to sender: track => \(videoTrack.debugDescription))")
-                        videoSender.track = videoTrack
+                        channel.videoSender!.track = videoTrack
                     }
                 }
             }
@@ -571,6 +608,7 @@ class BasicPeerChannelContext: NSObject, RTCPeerConnectionDelegate {
         
         // TODO: 条件の改善
         if mid == nil {
+
             if let videoTrack = stream.nativeVideoTrack {
                 channel.videoTrack = videoTrack
                 nativeChannel.add(videoTrack,

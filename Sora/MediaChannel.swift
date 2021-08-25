@@ -393,31 +393,31 @@ public final class MediaChannel {
         }
     }
     
-    public func attachVideoTrack() {
+    public func attachVideoTrackToStream() {
         if let stream = senderStream {
-            peerChannel.attachVideoTrack(stream)
+            peerChannel.attachVideoTrackToStream(stream)
         }
     }
     
-    public func detachVideoTrack() {
+    public func detachVideoTrackFromStream() {
         if let stream = senderStream {
-            peerChannel.detachVideoTrack(stream)
+            peerChannel.detachVideoTrackFromStream(stream)
         }
     }
 
-    public func attachAudioTrack() {
+    public func attachAudioTrackToStream() {
         if let stream = senderStream {
-            peerChannel.attachAudioTrack(stream)
+            peerChannel.attachAudioTrackToStream(stream)
         }
     }
     
-    public func detachAudioTrack() {
+    public func detachAudioTrackFromStream() {
         if let stream = senderStream {
-            peerChannel.detachAudioTrack(stream)
+            peerChannel.detachAudioTrackFromStream(stream)
         }
     }
     
-    public var isVideoTrackAttached: Bool {
+    public var isVideoTrackAttachedToStream: Bool {
         get {
             if let stream = senderStream {
                 return 0 < stream.nativeStream.videoTracks.count
@@ -427,13 +427,41 @@ public final class MediaChannel {
         }
     }
     
-    public var isAudioTrackAttached: Bool {
+    public var isAudioTrackAttachedToStream: Bool {
         get {
             if let stream = senderStream {
                 return 0 < stream.nativeStream.audioTracks.count
             } else {
                 return false
             }
+        }
+    }
+    
+    public func attachVideoTrackToSender() {
+        peerChannel.attachVideoTrackToSender()
+    }
+    
+    public func detachVideoTrackToSender() {
+        peerChannel.detachVideoTrackFromSender()
+    }
+    
+    public func attachAudioTrackToSender() {
+        peerChannel.attachAudioTrackToSender()
+    }
+    
+    public func detachAudioTrackFromSender() {
+        peerChannel.detachAudioTrackFromSender()
+    }
+    
+    public var isVideoTrackAttachedToSender: Bool {
+        get {
+            return peerChannel.videoSender?.track != nil
+        }
+    }
+    
+    public var isAudioTrackAttachedToSender: Bool {
+        get {
+            return peerChannel.audioSender?.track != nil
         }
     }
 }
