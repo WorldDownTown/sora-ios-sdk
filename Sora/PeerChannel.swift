@@ -305,6 +305,11 @@ class BasicPeerChannel: PeerChannel {
     
     func attachAudioTrackToSender() {
         if let sender = audioSender, let track = audioTrack {
+            Logger.debug(type: .peerChannel, message: "audioTrack.trackId => \(String(describing: audioTrack?.trackId)))")
+            Logger.debug(type: .peerChannel, message: "audioTrack.isEabled => \(String(describing: audioTrack?.isEnabled)))")
+            Logger.debug(type: .peerChannel, message: "audioTrack.source => \(String(describing: audioTrack?.source)))")
+            Logger.debug(type: .peerChannel, message: "audioTrack.source.state.rawValue => \(String(describing: audioTrack?.source.state.rawValue)))")
+            Logger.debug(type: .peerChannel, message: "audioTrack.source.volume => \(String(describing: audioTrack?.source.volume)))")
             sender.track = track
             Logger.debug(type: .peerChannel, message: "attachAudioTrackToSender")
         }
@@ -312,7 +317,17 @@ class BasicPeerChannel: PeerChannel {
     
     func detachAudioTrackFromSender() {
         if let sender = audioSender {
+            Logger.debug(type: .peerChannel, message: "audioTrack.trackId => \(String(describing: audioTrack?.trackId)))")
+            Logger.debug(type: .peerChannel, message: "audioTrack.isEabled => \(String(describing: audioTrack?.isEnabled)))")
+            Logger.debug(type: .peerChannel, message: "audioTrack.source => \(String(describing: audioTrack?.source)))")
+            Logger.debug(type: .peerChannel, message: "audioTrack.source.state.rawValue => \(String(describing: audioTrack?.source.state.rawValue)))")
+            Logger.debug(type: .peerChannel, message: "audioTrack.source.volume => \(String(describing: audioTrack?.source.volume)))")
             sender.track = nil
+            Logger.debug(type: .peerChannel, message: "audioTrack.trackId => \(String(describing: audioTrack?.trackId)))")
+            Logger.debug(type: .peerChannel, message: "audioTrack.isEabled => \(String(describing: audioTrack?.isEnabled)))")
+            Logger.debug(type: .peerChannel, message: "audioTrack.source => \(String(describing: audioTrack?.source)))")
+            Logger.debug(type: .peerChannel, message: "audioTrack.source.state.rawValue => \(String(describing: audioTrack?.source.state.rawValue)))")
+            Logger.debug(type: .peerChannel, message: "audioTrack.source.volume => \(String(describing: audioTrack?.source.volume)))")
             Logger.debug(type: .peerChannel, message: "detachAudioTrackFromSender")
         }
     }
@@ -565,9 +580,7 @@ class BasicPeerChannelContext: NSObject, RTCPeerConnectionDelegate {
                     channel.audioSender!.streamIds = [nativeStream.streamId]
                     if let audioTrack = nativeStream.audioTracks.first {
                         channel.audioTrack = audioTrack
-                        Logger.debug(type: .peerChannel,
-                                     message: "set audio track to sender: track => \(audioTrack.debugDescription)")
-                        channel.audioSender!.track = audioTrack
+                        channel.attachAudioTrackToSender()
                     }
                 }
             } else {
@@ -589,9 +602,7 @@ class BasicPeerChannelContext: NSObject, RTCPeerConnectionDelegate {
                     channel.videoSender!.streamIds = [nativeStream.streamId]
                     if let videoTrack = nativeStream.videoTracks.first {
                         channel.videoTrack = videoTrack
-                        Logger.debug(type: .peerChannel,
-                                     message: "set video track to sender: track => \(videoTrack.debugDescription))")
-                        channel.videoSender!.track = videoTrack
+                        channel.attachVideoTrackToSender()
                     }
                 }
             }
