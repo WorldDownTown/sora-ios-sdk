@@ -317,18 +317,27 @@ class BasicPeerChannel: PeerChannel {
     
     func detachAudioTrackFromSender() {
         if let sender = audioSender {
+            Logger.debug(type: .peerChannel, message: "RTCAudioSession.sharedInstance().isActive => \(RTCAudioSession.sharedInstance().isActive)")
+            Logger.debug(type: .peerChannel, message: "RTCAudioSession.sharedInstance().category => \(RTCAudioSession.sharedInstance().category)")
+            Logger.debug(type: .peerChannel, message: "RTCAudioSession.sharedInstance().inputAvailable => \(RTCAudioSession.sharedInstance().inputAvailable)")
+            Logger.debug(type: .peerChannel, message: "RTCAudioSession.sharedInstance().inputGain => \(RTCAudioSession.sharedInstance().inputGain)")
             Logger.debug(type: .peerChannel, message: "audioTrack.trackId => \(String(describing: audioTrack?.trackId)))")
             Logger.debug(type: .peerChannel, message: "audioTrack.isEabled => \(String(describing: audioTrack?.isEnabled)))")
             Logger.debug(type: .peerChannel, message: "audioTrack.source => \(String(describing: audioTrack?.source)))")
             Logger.debug(type: .peerChannel, message: "audioTrack.source.state.rawValue => \(String(describing: audioTrack?.source.state.rawValue)))")
             Logger.debug(type: .peerChannel, message: "audioTrack.source.volume => \(String(describing: audioTrack?.source.volume)))")
             sender.track = nil
+            Logger.debug(type: .peerChannel, message: "detachAudioTrackFromSender")
+            
+            Logger.debug(type: .peerChannel, message: "RTCAudioSession.sharedInstance().isActive => \(RTCAudioSession.sharedInstance().isActive)")
+            Logger.debug(type: .peerChannel, message: "RTCAudioSession.sharedInstance().category => \(RTCAudioSession.sharedInstance().category)")
+            Logger.debug(type: .peerChannel, message: "RTCAudioSession.sharedInstance().inputAvailable => \(RTCAudioSession.sharedInstance().inputAvailable)")
+            Logger.debug(type: .peerChannel, message: "RTCAudioSession.sharedInstance().inputGain => \(RTCAudioSession.sharedInstance().inputGain)")
             Logger.debug(type: .peerChannel, message: "audioTrack.trackId => \(String(describing: audioTrack?.trackId)))")
             Logger.debug(type: .peerChannel, message: "audioTrack.isEabled => \(String(describing: audioTrack?.isEnabled)))")
             Logger.debug(type: .peerChannel, message: "audioTrack.source => \(String(describing: audioTrack?.source)))")
             Logger.debug(type: .peerChannel, message: "audioTrack.source.state.rawValue => \(String(describing: audioTrack?.source.state.rawValue)))")
             Logger.debug(type: .peerChannel, message: "audioTrack.source.volume => \(String(describing: audioTrack?.source.volume)))")
-            Logger.debug(type: .peerChannel, message: "detachAudioTrackFromSender")
         }
     }
 }
