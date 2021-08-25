@@ -133,6 +133,9 @@ public protocol PeerChannel: AnyObject {
     /// シグナリングチャネル
     var signalingChannel: SignalingChannel { get }
     
+    var videoTrack: RTCVideoTrack? { get set }
+    var audioTrack: RTCAudioTrack? { get set }
+    
     // MARK: - インスタンスの生成
     
     /**
@@ -159,7 +162,11 @@ public protocol PeerChannel: AnyObject {
      - parameter error: 接続解除の原因となったエラー
      */
     func disconnect(error: Error?)
-    
+
+    func attachVideoTrack(_ stream: MediaStream)
+    func detachVideoTrack(_ stream: MediaStream)
+    func attachAudioTrack(_ stream: MediaStream)
+    func detachAudioTrack(_ stream: MediaStream)
 }
 
 // MARK: -
@@ -173,7 +180,7 @@ class BasicPeerChannel: PeerChannel {
     
     private(set) var streams: [MediaStream] = []
     private(set) var iceCandidates: [ICECandidate] = []
-    
+
     var clientId: String? {
         get { return context.clientId }
     }
@@ -190,6 +197,9 @@ class BasicPeerChannel: PeerChannel {
     
     private var context: BasicPeerChannelContext!
     
+    public var audioTrack: RTCAudioTrack?
+    public var videoTrack: RTCVideoTrack?
+
     required init(configuration: Configuration, signalingChannel: SignalingChannel) {
         self.configuration = configuration
         self.signalingChannel = signalingChannel
@@ -242,6 +252,33 @@ class BasicPeerChannel: PeerChannel {
         // This method is meant to be called only when disconnection cleanup
     }
     
+    func attachVideoTrack(_ stream: MediaStream) {
+        if let videoTrack = videoTrack {
+            Logger.debug(type: .peerChannel, message: "attachVideoTrack")
+            stream.nativeStream.addVideoTrack(videoTrack)
+        }
+    }
+    
+    func detachVideoTrack(_ stream: MediaStream) {
+        if let videoTrack = videoTrack {
+            stream.nativeStream.removeVideoTrack(videoTrack)
+            Logger.debug(type: .peerChannel, message: "detachVideoTrack")
+        }
+    }
+    
+    func attachAudioTrack(_ stream: MediaStream) {
+        if let audioTrack = audioTrack {
+            stream.nativeStream.addAudioTrack(audioTrack)
+            Logger.debug(type: .peerChannel, message: "attachAudioTrack")
+        }
+    }
+    
+    func detachAudioTrack(_ stream: MediaStream) {
+        if let audioTrack = audioTrack {
+            stream.nativeStream.removeAudioTrack(audioTrack)
+            Logger.debug(type: .peerChannel, message: "detachAudioTrack")
+        }
+    }
 }
 
 // MARK: -
@@ -490,6 +527,7 @@ class BasicPeerChannelContext: NSObject, RTCPeerConnectionDelegate {
                     let audioSender = transceiver.sender
                     audioSender.streamIds = [nativeStream.streamId]
                     if let audioTrack = nativeStream.audioTracks.first {
+                        channel.audioTrack = audioTrack
                         Logger.debug(type: .peerChannel,
                                      message: "set audio track to sender: track => \(audioTrack.debugDescription)")
                         audioSender.track = audioTrack
@@ -513,6 +551,7 @@ class BasicPeerChannelContext: NSObject, RTCPeerConnectionDelegate {
                     let videoSender = transceiver.sender
                     videoSender.streamIds = [nativeStream.streamId]
                     if let videoTrack = nativeStream.videoTracks.first {
+                        channel.videoTrack = videoTrack
                         Logger.debug(type: .peerChannel,
                                      message: "set video track to sender: track => \(videoTrack.debugDescription))")
                         videoSender.track = videoTrack
@@ -532,12 +571,14 @@ class BasicPeerChannelContext: NSObject, RTCPeerConnectionDelegate {
         
         // TODO: 条件の改善
         if mid == nil {
-            if let track = stream.nativeVideoTrack {
-                nativeChannel.add(track,
+            if let videoTrack = stream.nativeVideoTrack {
+                channel.videoTrack = videoTrack
+                nativeChannel.add(videoTrack,
                                   streamIds: [stream.nativeStream.streamId])
             }
-            if let track = stream.nativeAudioTrack {
-                nativeChannel.add(track,
+            if let audioTrack = stream.nativeAudioTrack {
+                channel.audioTrack = audioTrack
+                nativeChannel.add(audioTrack,
                                   streamIds: [stream.nativeStream.streamId])
             }
         }

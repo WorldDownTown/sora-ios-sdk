@@ -364,7 +364,6 @@ public final class MediaChannel {
     
     /**
      接続を解除します。
-     
      - parameter error: 接続解除の原因となったエラー
      */
     public func disconnect(error: Error?) {
@@ -394,6 +393,49 @@ public final class MediaChannel {
         }
     }
     
+    public func attachVideoTrack() {
+        if let stream = senderStream {
+            peerChannel.attachVideoTrack(stream)
+        }
+    }
+    
+    public func detachVideoTrack() {
+        if let stream = senderStream {
+            peerChannel.detachVideoTrack(stream)
+        }
+    }
+
+    public func attachAudioTrack() {
+        if let stream = senderStream {
+            peerChannel.attachAudioTrack(stream)
+        }
+    }
+    
+    public func detachAudioTrack() {
+        if let stream = senderStream {
+            peerChannel.detachAudioTrack(stream)
+        }
+    }
+    
+    public var isVideoTrackAttached: Bool {
+        get {
+            if let stream = senderStream {
+                return 0 < stream.nativeStream.videoTracks.count
+            } else {
+                return false
+            }
+        }
+    }
+    
+    public var isAudioTrackAttached: Bool {
+        get {
+            if let stream = senderStream {
+                return 0 < stream.nativeStream.audioTracks.count
+            } else {
+                return false
+            }
+        }
+    }
 }
 
 extension MediaChannel: CustomStringConvertible {

@@ -52,7 +52,7 @@ public final class MediaStreamHandlers {
  メディアストリームは映像と音声の送受信を行います。
  メディアストリーム 1 つにつき、 1 つの映像と 1 つの音声を送受信可能です。
  */
-public protocol MediaStream: class {
+public protocol MediaStream: AnyObject {
     
     // MARK: - イベントハンドラ
     
@@ -101,6 +101,10 @@ public protocol MediaStream: class {
     
     /// 映像レンダラー。
     var videoRenderer: VideoRenderer? { get set }
+    
+    // TODO: nativeStream を public にせずに、 MediaStream に (at|de)tach(Video|Audio)Track を実装した方が良いかもしれない
+    // しかし、送信用の MediaStream のみが ^ の関数を必要とするため、 nativeStream に ^ を実装しない方が良いのかもしれない
+    var nativeStream: RTCMediaStream { get }
     
     /**
      映像フレームをサーバーに送信します。
@@ -169,7 +173,7 @@ class BasicMediaStream: MediaStream {
         }
     }
     
-    var nativeStream: RTCMediaStream
+    public var nativeStream: RTCMediaStream
     
     var nativeVideoTrack: RTCVideoTrack? {
         return nativeStream.videoTracks.first
