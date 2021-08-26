@@ -258,15 +258,23 @@ class BasicPeerChannel: PeerChannel {
         // This method is meant to be called only when disconnection cleanup
     }
 
-    // TODO: audio track の方は AudioSession を操作しているが、カメラは操作していないので非対称性が気になる
+
     // TODO: 実装を context に移した方が良い? => context の方もごちゃごちゃしているので別の場所に整理できたら良い気がする
     func attachVideoTrackToSender() {
         if videoTrack == nil {
             let track = context.initializeVideoTrack()
             videoTrack = track
-            // TODO: video の方は stream に track を追加する必要がある (CameraVideoCapturer が stream を使うため?)
-            senderStream?.nativeStream.addVideoTrack(track)
+            
+            if let stream = senderStream {
+                // TODO: video の方は stream に track を追加する必要がある (CameraVideoCapturer が stream を使うため?)
+                stream.nativeStream.addVideoTrack(track)
+
+                if configuration.cameraSettings.isEnabled {
+                    context.initializeCameraVideoCapturer(stream: stream)
+                }
+            }
         }
+        
         
         if let sender = videoSender, let track = videoTrack {
             sender.track = track
@@ -582,16 +590,17 @@ class BasicPeerChannelContext: NSObject, RTCPeerConnectionDelegate {
             }
         }
         
+        /*
+        TODO: audioEnabled, videoEnabled がシグナリングとデバイス初期化の2つの目的に使用されているので整理が必要
+        一旦、デフォルトでデバイスが初期化されないようにしてみる
         if configuration.audioEnabled {
             channel.attachAudioTrackToSender()
         }
         
         if configuration.videoEnabled {
             channel.attachVideoTrackToSender()
-            if configuration.cameraSettings.isEnabled {
-                initializeCameraVideoCapturer(stream: stream)
-            }
         }
+        */
         
         channel.add(stream: stream)
         Logger.debug(type: .peerChannel,
