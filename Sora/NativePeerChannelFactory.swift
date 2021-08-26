@@ -75,8 +75,8 @@ class NativePeerChannelFactory {
         return nativeFactory.videoSource()
     }
     
-    func createNativeVideoTrack(videoSource: RTCVideoSource,
-                                trackId: String) -> RTCVideoTrack {
+    func createNativeVideoTrack(trackId: String) -> RTCVideoTrack {
+        let videoSource = createNativeVideoSource()
         return nativeFactory.videoTrack(with: videoSource, trackId: trackId)
     }
     
@@ -91,9 +91,9 @@ class NativePeerChannelFactory {
     }
     
     func createNativeSenderStream(streamId: String,
-                                     videoTrackId: String?,
-                                     audioTrackId: String?,
-                                     constraints: MediaConstraints) -> RTCMediaStream {
+                                  constraints: MediaConstraints,
+                                  videoTrackId: String? = nil,
+                                  audioTrackId: String? = nil) -> RTCMediaStream {
         Logger.debug(type: .nativePeerChannel,
                      message: "create native sender stream (\(streamId))")
         let nativeStream = createNativeStream(streamId: streamId)
@@ -101,9 +101,7 @@ class NativePeerChannelFactory {
         if let trackId = videoTrackId {
             Logger.debug(type: .nativePeerChannel,
                          message: "create native video track (\(trackId))")
-            let videoSource = createNativeVideoSource()
-            let videoTrack = createNativeVideoTrack(videoSource: videoSource,
-                                                    trackId: trackId)
+            let videoTrack = createNativeVideoTrack(trackId: trackId)
             nativeStream.addVideoTrack(videoTrack)
         }
         
@@ -131,9 +129,9 @@ class NativePeerChannelFactory {
         }
         
         let stream = createNativeSenderStream(streamId: "offer",
-                                                 videoTrackId: "video",
-                                                 audioTrackId: "audio",
-                                                 constraints: constraints)
+                                              constraints: constraints,
+                                              videoTrackId: "video",
+                                              audioTrackId: "audio")
         peer2.add(stream.videoTracks[0], streamIds: [stream.streamId])
         peer2.add(stream.audioTracks[0], streamIds: [stream.streamId])
         peer2.offer(for: constraints.nativeValue) { sdp, error in

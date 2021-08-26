@@ -289,7 +289,13 @@ class BasicPeerChannel: PeerChannel {
         }
     }
     
+    // TODO: audio track の方は AudioSession を操作しているが、カメラは操作していないので非対称性が気になる
+    // TODO: 実装を context に移した方が良い?
     func attachVideoTrackToSender() {
+        if videoTrack == nil {
+            videoTrack = context.initializeVideoTrack()
+        }
+        
         if let sender = videoSender, let track = videoTrack {
             sender.track = track
             Logger.debug(type: .peerChannel, message: "attachVideoTrackToSender")
@@ -304,9 +310,12 @@ class BasicPeerChannel: PeerChannel {
     }
     
     func attachAudioTrackToSender() {
+        if audioTrack == nil {
+            audioTrack = context.initializeAudioTrack()
+        }
+        
         if let sender = audioSender, let track = audioTrack {
             Logger.debug(type: .peerChannel, message: " => \(RTCAudioSession.sharedInstance().isActive)")
-
             // detachAudioTrackFromSender で sender.track = null した瞬間に RTCAudioSession.sharedInstance().isActive が false になり、 audio の送信が止まってしまうが、
             // context.initializeInputを再度実行すると復活することを確認
             if !RTCAudioSession.sharedInstance().isActive {
@@ -325,13 +334,15 @@ class BasicPeerChannel: PeerChannel {
             Logger.debug(type: .peerChannel, message: "AudioSession status before detaching => \(RTCAudioSession.sharedInstance().isActive ? "active" : "inactive")")
             sender.track = nil
             Logger.debug(type: .peerChannel, message: "AudioSession status after detaching => \(RTCAudioSession.sharedInstance().isActive ? "active" : "inactive")")
-            
+            context.isAudioInputInitialized = false
+
+            /*
             // チャンネル参加者に sendrecv がいると、オレンジ色のインジケーターが消えなかったので category を soloAmbient 変更しようとしたが、
             // 以下のエラーが発生して category の変更が失敗した
             // failed to initialize audio input => The operation couldn’t be completed. (org.webrtc.RTC_OBJC_TYPE(RTCAudioSession) error -3.)
-            context.isAudioInputInitialized = false
             context.initializeAudioInput(category: AVAudioSession.Category.soloAmbient)
             context.isAudioInputInitialized = false
+            */
         }
     }
 }
@@ -557,14 +568,9 @@ class BasicPeerChannelContext: NSObject, RTCPeerConnectionDelegate {
     }
     
     func initializeSenderStream(mid: Dictionary<String, String>? = nil) {
-        
         let nativeStream = NativePeerChannelFactory.default
             .createNativeSenderStream(streamId: configuration.publisherStreamId,
-                                         videoTrackId:
-                configuration.videoEnabled ? configuration.publisherVideoTrackId: nil,
-                                         audioTrackId:
-                configuration.audioEnabled ? configuration.publisherAudioTrackId : nil,
-                                         constraints: webRTCConfiguration.constraints)
+                                      constraints: webRTCConfiguration.constraints)
         let stream = BasicMediaStream(peerChannel: channel,
                                       nativeStream: nativeStream)
         
@@ -581,10 +587,6 @@ class BasicPeerChannelContext: NSObject, RTCPeerConnectionDelegate {
                                  message: "set audio sender: mid => \(audioMid), transceiver => \(transceiver.debugDescription)")
                     channel.audioSender = transceiver.sender
                     channel.audioSender!.streamIds = [nativeStream.streamId]
-                    if let audioTrack = nativeStream.audioTracks.first {
-                        channel.audioTrack = audioTrack
-                        channel.attachAudioTrackToSender()
-                    }
                 }
             } else {
                 Logger.error(type: .peerChannel, message: "transceiver not found")
@@ -603,40 +605,38 @@ class BasicPeerChannelContext: NSObject, RTCPeerConnectionDelegate {
                                  message: "set video sender: mid => \(videoMid), transceiver => \(transceiver.debugDescription)")
                     channel.videoSender = transceiver.sender
                     channel.videoSender!.streamIds = [nativeStream.streamId]
-                    if let videoTrack = nativeStream.videoTracks.first {
-                        channel.videoTrack = videoTrack
-                        channel.attachVideoTrackToSender()
-                    }
                 }
             }
         }
         
         if configuration.audioEnabled {
-            initializeAudioInput(category: AVAudioSession.Category.playAndRecord)
+            channel.attachAudioTrackToSender()
         }
         
-        if configuration.videoEnabled && configuration.cameraSettings.isEnabled {
-            initializeCameraVideoCapturer(stream: BasicMediaStream(peerChannel: channel,
-                                                                   nativeStream: nativeStream))
-        }
-        
-        // TODO: 条件の改善
-        if mid == nil {
+        if configuration.videoEnabled {
+            channel.attachVideoTrackToSender()
 
-            if let videoTrack = stream.nativeVideoTrack {
-                channel.videoTrack = videoTrack
-                nativeChannel.add(videoTrack,
-                                  streamIds: [stream.nativeStream.streamId])
+            // TODO: video の方は stream に track を追加する必要がある (多分、 CameraVideoCapturer が stream を使うため)
+            if let track = channel.videoTrack {
+                nativeStream.addVideoTrack(track)
             }
-            if let audioTrack = stream.nativeAudioTrack {
-                channel.audioTrack = audioTrack
-                nativeChannel.add(audioTrack,
-                                  streamIds: [stream.nativeStream.streamId])
+            if configuration.cameraSettings.isEnabled {
+                initializeCameraVideoCapturer(stream: stream)
             }
         }
+        
         channel.add(stream: stream)
         Logger.debug(type: .peerChannel,
                      message: "create publisher stream (id: \(configuration.publisherStreamId))")
+    }
+    
+    func initializeAudioTrack() -> RTCAudioTrack {
+        return NativePeerChannelFactory.default.createNativeAudioTrack(trackId: configuration.publisherAudioTrackId,
+                                                                                     constraints: configuration.webRTCConfiguration.nativeConstraints)
+    }
+    
+    func initializeVideoTrack() -> RTCVideoTrack {
+        return NativePeerChannelFactory.default.createNativeVideoTrack(trackId: configuration.publisherVideoTrackId)
     }
     
     func initializeCameraVideoCapturer(stream: MediaStream) {
