@@ -290,8 +290,13 @@ class BasicPeerChannel: PeerChannel {
     }
     
     func attachAudioTrackToSender() {
+        Logger.debug(type: .peerChannel, message: "AudioSession status before attaching => \(RTCAudioSession.sharedInstance().isActive ? "active" : "inactive")")
         if audioTrack == nil {
             audioTrack = context.initializeAudioTrack()
+            
+            // TODO: 初回のアタッチで以下のエラーが The operation couldn’t be completed 発生してしまう
+            // failed to initialize audio input => The operation couldn’t be completed. (org.webrtc.RTC_OBJC_TYPE(RTCAudioSession) error -3.)
+            context.initializeAudioInput(category: AVAudioSession.Category.playAndRecord)
         }
         
         if let sender = audioSender, let track = audioTrack {
@@ -307,6 +312,7 @@ class BasicPeerChannel: PeerChannel {
             sender.track = track
             Logger.debug(type: .peerChannel, message: "attachAudioTrackToSender")
         }
+        Logger.debug(type: .peerChannel, message: "AudioSession status after attaching => \(RTCAudioSession.sharedInstance().isActive ? "active" : "inactive")")
     }
     
     func detachAudioTrackFromSender() {
