@@ -204,6 +204,8 @@ class BasicPeerChannel: PeerChannel {
     public var videoSender: RTCRtpSender?
     public var audioSender: RTCRtpSender?
     
+    var senderStream: MediaStream?
+    
     required init(configuration: Configuration, signalingChannel: SignalingChannel) {
         self.configuration = configuration
         self.signalingChannel = signalingChannel
@@ -257,10 +259,13 @@ class BasicPeerChannel: PeerChannel {
     }
 
     // TODO: audio track の方は AudioSession を操作しているが、カメラは操作していないので非対称性が気になる
-    // TODO: 実装を context に移した方が良い?
+    // TODO: 実装を context に移した方が良い? => context の方もごちゃごちゃしているので別の場所に整理できたら良い気がする
     func attachVideoTrackToSender() {
         if videoTrack == nil {
-            videoTrack = context.initializeVideoTrack()
+            let track = context.initializeVideoTrack()
+            videoTrack = track
+            // TODO: video の方は stream に track を追加する必要がある (CameraVideoCapturer が stream を使うため?)
+            senderStream?.nativeStream.addVideoTrack(track)
         }
         
         if let sender = videoSender, let track = videoTrack {
@@ -540,6 +545,7 @@ class BasicPeerChannelContext: NSObject, RTCPeerConnectionDelegate {
                                       constraints: webRTCConfiguration.constraints)
         let stream = BasicMediaStream(peerChannel: channel,
                                       nativeStream: nativeStream)
+        channel.senderStream = stream
         
         if let audioMid = mid?["audio"] {
             let transceiver = nativeChannel.transceivers.first { $0.mid == audioMid }
@@ -582,11 +588,6 @@ class BasicPeerChannelContext: NSObject, RTCPeerConnectionDelegate {
         
         if configuration.videoEnabled {
             channel.attachVideoTrackToSender()
-
-            // TODO: video の方は stream に track を追加する必要がある (多分、 CameraVideoCapturer が stream を使うため)
-            if let track = channel.videoTrack {
-                nativeStream.addVideoTrack(track)
-            }
             if configuration.cameraSettings.isEnabled {
                 initializeCameraVideoCapturer(stream: stream)
             }
