@@ -163,11 +163,6 @@ public protocol PeerChannel: AnyObject {
      */
     func disconnect(error: Error?)
 
-    func attachVideoTrackToStream(_ stream: MediaStream)
-    func detachVideoTrackFromStream(_ stream: MediaStream)
-    func attachAudioTrackToStream(_ stream: MediaStream)
-    func detachAudioTrackFromStream(_ stream: MediaStream)
-    
     func attachVideoTrackToSender()
     func detachVideoTrackFromSender()
     func attachAudioTrackToSender()
@@ -260,35 +255,7 @@ class BasicPeerChannel: PeerChannel {
         // Do not call `handlers.onRemoveStreamHandler` here
         // This method is meant to be called only when disconnection cleanup
     }
-    
-    func attachVideoTrackToStream(_ stream: MediaStream) {
-        if let videoTrack = videoTrack {
-            Logger.debug(type: .peerChannel, message: "attachVideoTrackToStream")
-            stream.nativeStream.addVideoTrack(videoTrack)
-        }
-    }
-    
-    func detachVideoTrackFromStream(_ stream: MediaStream) {
-        if let videoTrack = videoTrack {
-            stream.nativeStream.removeVideoTrack(videoTrack)
-            Logger.debug(type: .peerChannel, message: "detachVideoTrackFromStream")
-        }
-    }
-    
-    func attachAudioTrackToStream(_ stream: MediaStream) {
-        if let audioTrack = audioTrack {
-            stream.nativeStream.addAudioTrack(audioTrack)
-            Logger.debug(type: .peerChannel, message: "attachAudioTrackToStream")
-        }
-    }
-    
-    func detachAudioTrackFromStream(_ stream: MediaStream) {
-        if let audioTrack = audioTrack {
-            stream.nativeStream.removeAudioTrack(audioTrack)
-            Logger.debug(type: .peerChannel, message: "detachAudioTrackFromStream")
-        }
-    }
-    
+
     // TODO: audio track の方は AudioSession を操作しているが、カメラは操作していないので非対称性が気になる
     // TODO: 実装を context に移した方が良い?
     func attachVideoTrackToSender() {

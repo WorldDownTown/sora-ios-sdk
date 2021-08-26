@@ -392,51 +392,7 @@ public final class MediaChannel {
             handlers.onDisconnect?(error)
         }
     }
-    
-    public func attachVideoTrackToStream() {
-        if let stream = senderStream {
-            peerChannel.attachVideoTrackToStream(stream)
-        }
-    }
-    
-    public func detachVideoTrackFromStream() {
-        if let stream = senderStream {
-            peerChannel.detachVideoTrackFromStream(stream)
-        }
-    }
 
-    public func attachAudioTrackToStream() {
-        if let stream = senderStream {
-            peerChannel.attachAudioTrackToStream(stream)
-        }
-    }
-    
-    public func detachAudioTrackFromStream() {
-        if let stream = senderStream {
-            peerChannel.detachAudioTrackFromStream(stream)
-        }
-    }
-    
-    public var isVideoTrackAttachedToStream: Bool {
-        get {
-            if let stream = senderStream {
-                return 0 < stream.nativeStream.videoTracks.count
-            } else {
-                return false
-            }
-        }
-    }
-    
-    public var isAudioTrackAttachedToStream: Bool {
-        get {
-            if let stream = senderStream {
-                return 0 < stream.nativeStream.audioTracks.count
-            } else {
-                return false
-            }
-        }
-    }
-    
     public func attachVideoTrackToSender() {
         peerChannel.attachVideoTrackToSender()
     }
