@@ -307,18 +307,13 @@ class BasicPeerChannel: PeerChannel {
         if let sender = audioSender, let track = audioTrack {
             Logger.debug(type: .peerChannel, message: " => \(RTCAudioSession.sharedInstance().isActive)")
 
-            // TODO: detachAudioTrackFromSender で sender.track = null した瞬間に RTCAudioSession.sharedInstance().isActive が false になり、 audio の送信が止まってしまう
+            // detachAudioTrackFromSender で sender.track = null した瞬間に RTCAudioSession.sharedInstance().isActive が false になり、 audio の送信が止まってしまうが、
             // context.initializeInputを再度実行すると復活することを確認
             if !RTCAudioSession.sharedInstance().isActive {
                 Logger.debug(type: .peerChannel, message: "initializeAudioInput before attachment")
-                context.initializeAudioInput()
+                context.initializeAudioInput(category: AVAudioSession.Category.playAndRecord)
                 Logger.debug(type: .peerChannel, message: "AudioSession status after initializeAudioInput => \(RTCAudioSession.sharedInstance().isActive ? "active" : "inactive")")
             }
-            // NOTE: initializeAudioInput は効果があるが、 setActive は効果が無かった
-            // if !RTCAudioSession.sharedInstance().isActive {
-            //     try! RTCAudioSession.sharedInstance().setActive(true)
-            //    Logger.debug(type: .peerChannel, message: "RTCAudioSession.sharedInstance().isActive => \(RTCAudioSession.sharedInstance().isActive)")
-            // }
 
             sender.track = track
             Logger.debug(type: .peerChannel, message: "attachAudioTrackToSender")
@@ -327,11 +322,16 @@ class BasicPeerChannel: PeerChannel {
     
     func detachAudioTrackFromSender() {
         if let sender = audioSender {
-            Logger.debug(type: .peerChannel, message: "AudioSession status before detaching r=> \(RTCAudioSession.sharedInstance().isActive ? "active" : "inactive")")
+            Logger.debug(type: .peerChannel, message: "AudioSession status before detaching => \(RTCAudioSession.sharedInstance().isActive ? "active" : "inactive")")
             sender.track = nil
+            Logger.debug(type: .peerChannel, message: "AudioSession status after detaching => \(RTCAudioSession.sharedInstance().isActive ? "active" : "inactive")")
+            
+            // チャンネル参加者に sendrecv がいると、オレンジ色のインジケーターが消えなかったので category を soloAmbient 変更しようとしたが、
+            // 以下のエラーが発生して category の変更が失敗した
+            // failed to initialize audio input => The operation couldn’t be completed. (org.webrtc.RTC_OBJC_TYPE(RTCAudioSession) error -3.)
             context.isAudioInputInitialized = false
-            Logger.debug(type: .peerChannel, message: "AudioSession status after detaching r=> \(RTCAudioSession.sharedInstance().isActive)")
-            Logger.debug(type: .peerChannel, message: "RTCAudioSession.sharedInstance().isActive after detaching => \(RTCAudioSession.sharedInstance().isActive ? "active" : "inactive")")
+            context.initializeAudioInput(category: AVAudioSession.Category.soloAmbient)
+            context.isAudioInputInitialized = false
         }
     }
 }
@@ -612,7 +612,7 @@ class BasicPeerChannelContext: NSObject, RTCPeerConnectionDelegate {
         }
         
         if configuration.audioEnabled {
-            initializeAudioInput()
+            initializeAudioInput(category: AVAudioSession.Category.playAndRecord)
         }
         
         if configuration.videoEnabled && configuration.cameraSettings.isEnabled {
@@ -702,7 +702,7 @@ class BasicPeerChannelContext: NSObject, RTCPeerConnectionDelegate {
         }
     }
     
-    func initializeAudioInput() {
+    func initializeAudioInput(category: AVAudioSession.Category) {
         if isAudioInputInitialized {
             Logger.debug(type: .peerChannel,
                          message: "audio input is already initialized")
@@ -713,9 +713,8 @@ class BasicPeerChannelContext: NSObject, RTCPeerConnectionDelegate {
             // カテゴリをマイク用途のものに変更する
             // libwebrtc の内部で参照される RTCAudioSessionConfiguration を使う必要がある
             Logger.debug(type: .peerChannel,
-                         message: "change audio session category (playAndRecord)")
-            RTCAudioSessionConfiguration.webRTC().category =
-                AVAudioSession.Category.playAndRecord.rawValue
+                         message: "change audio session category to \(category.rawValue.debugDescription)")
+            RTCAudioSessionConfiguration.webRTC().category = category.rawValue
             
             RTCAudioSession.sharedInstance().initializeInput { error in
                 if let error = error {
