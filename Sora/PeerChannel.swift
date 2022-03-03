@@ -126,6 +126,8 @@ class PeerChannel: NSObject, RTCPeerConnectionDelegate {
     // 値が設定されている場合2回目の type: connect メッセージ送信とみなし、 redirect 中であると判断する
     private var sdp: String?
 
+    private var queue: OperationQueue
+
     // MARK: - Public methods
 
     required init(configuration: Configuration, signalingChannel: SignalingChannel, mediaChannel: MediaChannel?) {
@@ -135,6 +137,13 @@ class PeerChannel: NSObject, RTCPeerConnectionDelegate {
         webRTCConfiguration = configuration.webRTCConfiguration
 
         lock = Lock()
+
+        let queue = OperationQueue()
+        // TODO: queue.name = ""
+        queue.maxConcurrentOperationCount = 1
+        queue.qualityOfService = .userInteractive
+        self.queue = queue
+
         super.init()
         lock.context = self
 
@@ -478,68 +487,75 @@ class PeerChannel: NSObject, RTCPeerConnectionDelegate {
                               constraints: RTCMediaConstraints,
                               handler: @escaping (String?, Error?) -> Void)
     {
-        guard let nativeChannel = nativeChannel else {
-            Logger.debug(type: .peerChannel, message: "nativeChannel shoud not be nil")
-            return
-        }
-
-        Logger.debug(type: .peerChannel, message: "try create answer")
-        Logger.debug(type: .peerChannel, message: offer)
-
-        Logger.debug(type: .peerChannel, message: "try setting remote description")
-        let offer = RTCSessionDescription(type: .offer, sdp: offer)
-        nativeChannel.setRemoteDescription(offer) { error in
-            guard error == nil else {
-                Logger.debug(type: .peerChannel,
-                             message: "failed setting remote description: (\(error!.localizedDescription)")
-                handler(nil, error)
+        queue.addOperation { [weak self] in
+            guard let weakSelf = self else {
                 return
             }
 
-            guard let nativeChannel = self.nativeChannel else {
+            guard let nativeChannel = weakSelf.nativeChannel else {
                 Logger.debug(type: .peerChannel, message: "nativeChannel shoud not be nil")
                 return
             }
 
-            Logger.debug(type: .peerChannel, message: "did set remote description")
-            Logger.debug(type: .peerChannel, message: "\(offer.sdpDescription)")
+            Logger.debug(type: .peerChannel, message: "try create answer")
+            Logger.debug(type: .peerChannel, message: offer)
 
-            if isSender {
-                self.initializeSenderStream()
-                self.updateSenderOfferEncodings()
-            }
+            Logger.debug(type: .peerChannel, message: "try setting remote description")
+            let offer = RTCSessionDescription(type: .offer, sdp: offer)
 
-            Logger.debug(type: .peerChannel, message: "try creating native answer")
-            nativeChannel.answer(for: constraints) { answer, error in
+            nativeChannel.setRemoteDescription(offer) { error in
                 guard error == nil else {
                     Logger.debug(type: .peerChannel,
-                                 message: "failed creating native answer (\(error!.localizedDescription)")
+                                 message: "failed setting remote description: (\(error!.localizedDescription)")
                     handler(nil, error)
                     return
                 }
 
-                guard let nativeChannel = self.nativeChannel else {
+                guard let nativeChannel = weakSelf.nativeChannel else {
                     Logger.debug(type: .peerChannel, message: "nativeChannel shoud not be nil")
                     return
                 }
 
-                Logger.debug(type: .peerChannel, message: "did create answer")
+                Logger.debug(type: .peerChannel, message: "did set remote description")
+                Logger.debug(type: .peerChannel, message: "\(offer.sdpDescription)")
 
-                Logger.debug(type: .peerChannel, message: "try setting local description")
-                nativeChannel.setLocalDescription(answer!) { error in
+                if isSender {
+                    weakSelf.initializeSenderStream()
+                    weakSelf.updateSenderOfferEncodings()
+                }
+
+                Logger.debug(type: .peerChannel, message: "try creating native answer")
+                nativeChannel.answer(for: constraints) { answer, error in
                     guard error == nil else {
                         Logger.debug(type: .peerChannel,
-                                     message: "failed setting local description")
+                                     message: "failed creating native answer (\(error!.localizedDescription)")
                         handler(nil, error)
                         return
                     }
-                    Logger.debug(type: .peerChannel,
-                                 message: "did set local description")
-                    Logger.debug(type: .peerChannel,
-                                 message: "\(answer!.sdpDescription)")
-                    Logger.debug(type: .peerChannel,
-                                 message: "did create answer")
-                    handler(answer!.sdp, nil)
+
+                    guard let nativeChannel = weakSelf.nativeChannel else {
+                        Logger.debug(type: .peerChannel, message: "nativeChannel shoud not be nil")
+                        return
+                    }
+
+                    Logger.debug(type: .peerChannel, message: "did create answer")
+
+                    Logger.debug(type: .peerChannel, message: "try setting local description")
+                    nativeChannel.setLocalDescription(answer!) { error in
+                        guard error == nil else {
+                            Logger.debug(type: .peerChannel,
+                                         message: "failed setting local description")
+                            handler(nil, error)
+                            return
+                        }
+                        Logger.debug(type: .peerChannel,
+                                     message: "did set local description")
+                        Logger.debug(type: .peerChannel,
+                                     message: "\(answer!.sdpDescription)")
+                        Logger.debug(type: .peerChannel,
+                                     message: "did create answer")
+                        handler(answer!.sdp, nil)
+                    }
                 }
             }
         }
@@ -828,10 +844,20 @@ class PeerChannel: NSObject, RTCPeerConnectionDelegate {
             stream.terminate()
         }
         streams.removeAll()
-
-        nativeChannel?.close()
-
         signalingChannel.disconnect(error: error, reason: reason)
+
+        // 全ての queue キャンセルした後に RTCPeerConnection の切断を行う
+        // TODO: addBarrierBlock を使えば待つ必要が無い?
+        queue.waitUntilAllOperationsAreFinished()
+        queue.addOperation { [weak self] in
+            guard let weakSelf = self else {
+                return
+            }
+            weakSelf.nativeChannel?.close()
+
+            // 実行されずに queue に残っている operation を削除する
+            weakSelf.queue.cancelAllOperations()
+        }
 
         Logger.debug(type: .peerChannel, message: "call onDisconnect")
         internalHandlers.onDisconnect?(error, reason)
