@@ -29,6 +29,39 @@ class WrapperVideoEncoderFactory: NSObject, RTCVideoEncoderFactory {
     }
 }
 
+// 参照: https://developer.apple.com/documentation/security/1401555-sectrustcreatewithcertificates
+// The certificate to be verified, plus any other certificates you think might be useful for verifying the certificate.
+// The certificate to be verified must be the first in the array.
+class CustomSSLCertificateVerifier: NSObject, RTCSSLCertificateVerifier {
+    func verify(_ derCertificate: Data) -> Bool {
+        guard let cert = SecCertificateCreateWithData(kCFAllocatorDefault, derCertificate as CFData) else {
+            Logger.error(type: .peerChannel, message: "\(#function): SecCertificateCreateWithData failed."
+                + "certificate.base64EncodedString() => \(derCertificate.base64EncodedString())")
+            return false
+        }
+
+        Logger.info(type: .peerChannel, message: "\(#function): cert=\(cert)")
+
+        var trust: SecTrust?
+        // NOTE: 設定しているポリシーが適切かは要確認
+        let status = SecTrustCreateWithCertificates(cert, SecPolicyCreateBasicX509(), &trust)
+        guard status == errSecSuccess else {
+            Logger.error(type: .peerChannel, message: "\(#function): SecTrustCreateWithCertificates failed. status => \(status.description)")
+            return false
+        }
+
+        var error: CFError?
+        let result = SecTrustEvaluateWithError(trust!, &error)
+        if let error = error {
+            Logger.error(type: .peerChannel, message: "\(#function): SecTrustEvaluateWithError failed. error => \(error.localizedDescription)")
+            return false
+        }
+
+        Logger.info(type: .peerChannel, message: "\(#function): result => \(result.description)")
+        return result
+    }
+}
+
 class NativePeerChannelFactory {
     static var `default` = NativePeerChannelFactory()
 
@@ -58,9 +91,11 @@ class NativePeerChannelFactory {
                                  constraints: MediaConstraints,
                                  delegate: RTCPeerConnectionDelegate?) -> RTCPeerConnection?
     {
-        nativeFactory
+        let verifier = CustomSSLCertificateVerifier()
+        return nativeFactory
             .peerConnection(with: configuration.nativeValue,
                             constraints: constraints.nativeValue,
+                            certificateVerifier: verifier,
                             delegate: delegate)
     }
 
