@@ -194,10 +194,6 @@ public final class MediaChannel {
     /// シグナリングチャネル
     let signalingChannel: SignalingChannel
 
-    /// ウェブソケットチャンネル
-    @available(*, unavailable, message: "webSocketChannel は廃止されました。")
-    public var webSocketChannel: Any?
-
     /// ピアチャネル
     var peerChannel: PeerChannel {
         _peerChannel!

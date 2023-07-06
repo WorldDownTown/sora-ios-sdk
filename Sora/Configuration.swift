@@ -71,10 +71,6 @@ public struct Configuration {
         case disabled
     }
 
-    /// サーバーの URL
-    @available(*, unavailable, message: "url は廃止されました。 urlCandidates を利用してください。")
-    public var url: Any?
-
     /// シグナリングに利用する URL の候補
     public var urlCandidates: [URL]
 
@@ -123,11 +119,6 @@ public struct Configuration {
 
     /// 映像ビットレート。デフォルトは無指定です。
     public var videoBitRate: Int?
-
-    /// 映像キャプチャーの種別。
-    /// 廃止されました。
-    @available(*, unavailable, message: "videoCapturerDevice は廃止されました。")
-    public var videoCapturerDevice: VideoCapturerDevice?
 
     /// カメラの設定
     public var cameraSettings = CameraSettings.default
@@ -221,43 +212,8 @@ public struct Configuration {
     /// WebSocket チャネルに関するイベントハンドラ
     public var webSocketChannelHandlers = WebSocketChannelHandlers()
 
-    /// シグナリングチャネルに関するイベントハンドラ
-    @available(*, unavailable, message: "廃止されました。 mediaChannelHandlers を利用してください。")
-    public var signalingChannelHandlers = SignalingChannelHandlers()
-
-    /// ピアチャネルに関するイベントハンドラ
-    @available(*, unavailable, message: "廃止されました。 mediaChannelHandlers を利用してください。")
-    public var peerChannelHandlers = PeerChannelHandlers()
-
     /// メディアチャネルに関するイベントハンドラ
     public var mediaChannelHandlers = MediaChannelHandlers()
-
-    // MARK: - 接続チャネルに関する設定
-
-    /**
-     生成されるシグナリングチャネルの型。
-     何も指定しなければデフォルトのシグナリングチャネルが生成されます。
-     */
-    @available(*, unavailable, message: "signalingChannelType は廃止されました。")
-    public var signalingChannelType: Any?
-
-    /**
-     生成される WebSocket チャネルの型。
-     何も指定しなければデフォルトの WebSocket チャネルが生成されます。
-     */
-    @available(*, unavailable, message: "webSocketChannelType は廃止されました。")
-    public var webSocketChannelType: WebSocketChannel.Type?
-
-    /**
-     生成されるピアチャネルの型。
-     何も指定しなければデフォルトのピアチャネルが生成されます。
-     */
-    @available(*, unavailable, message: "peerChannelType は廃止されました。")
-    public var peerChannelType: Any?
-
-    /// :nodoc:
-    @available(*, unavailable, message: "allowsURLSessionWebSocketChannel は廃止されました。")
-    public var allowsURLSessionWebSocketChannel: Bool = true
 
     // MARK: パブリッシャーに関する設定
 

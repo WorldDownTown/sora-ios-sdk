@@ -333,25 +333,11 @@ public final class CameraVideoCapturer {
         nil
     }
 
-    /// `true` であれば接続解除時にカメラを停止します。
-    /// 廃止されました。
-    @available(*, unavailable, message: "廃止されました")
-    public var canStop: Bool = false
-
     /// :nodoc:
     @available(*, unavailable, message: "suitableFrameRate は廃止されました。 maxFramerate を利用してください。")
     public static func suitableFrameRate(for format: AVCaptureDevice.Format, frameRate: Int) -> Int? {
         nil
     }
-
-    /// カメラの設定
-    /// 廃止されました
-    @available(*, unavailable, message: "settings は廃止されました。")
-    public private(set) var settings: Any?
-
-    /// `true` であれば接続解除時にカメラを停止します。
-    @available(*, unavailable, message: "stopWhenDone は廃止されました。")
-    public private(set) var stopWhenDone: Bool = false
 
     /// :nodoc:
     @available(*, unavailable, message: "suitableFormat は廃止されました。 format を利用してください。")
